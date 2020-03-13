@@ -126,6 +126,7 @@ int main(int argc, char **argv)
       b->play();
     }
 
+
     cout << "Thank you for playing!" << endl;
 
   }

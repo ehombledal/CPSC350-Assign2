@@ -1,6 +1,7 @@
 
 #include "Board.h"
 
+
 //map Variables
 int mapChoice = 0;  //1 = RNG map, 2 = Mapfile
 
@@ -63,11 +64,69 @@ int main(int argc, char **argv)
   introInput();
   Board *b = new Board(mapChoice, boundaryStyle, outputChoice);
   b->setup();
-  b->print();
-  b->play();
-  b->print();
-  b->play();
-  b->print();
 
-  cout << b->isEmpty() << endl; 
+  if (outputChoice == 1)
+  {
+    while (!b -> isEmpty())
+    {
+      if (b->checkStable() == true)
+      {
+        cout << "Program is stable. Press any key to exit simulation." << endl;
+        getchar();
+        break;
+      }
+      //http://www.martinbroadhurst.com/sleep-for-milliseconds-in-c.html
+      this_thread::sleep_for(chrono::milliseconds(500));
+      b->print();
+      b->play();
+    }
+    cout << "Thank you for playing!" << endl;
+  }
+
+  if (outputChoice == 2)
+  {
+    while (!b -> isEmpty())
+    {
+      if (b->checkStable() == true)
+      {
+        cout << "program is stable. Press any key to exit simulation." << endl;
+        getchar();
+        break;
+      }
+      b->print();
+      cout << "press any key to continue." << endl;
+      getchar();
+      b->play();
+    }
+
+    cout << "Thank you for playing!" << endl;
+  }
+
+  if (outputChoice == 3)
+  {
+    ofstream outFS;
+    string fileName;
+    cout << "What is the name of the file you want results outputted to?" << endl;
+    cin >> fileName;
+
+    //creates file for the first time
+    outFS.open(fileName);
+    outFS << "GAME OF LIFE" << endl;
+    outFS.close();
+
+    while(!b -> isEmpty())
+    {
+      if (b->checkStable() == true)
+      {
+        cout << "program is stable. Press any key to exit simulation." << endl;
+        getchar();
+        break;
+      }
+      b->printToFile(fileName);
+      b->play();
+    }
+
+    cout << "Thank you for playing!" << endl;
+
+  }
 }

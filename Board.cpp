@@ -33,13 +33,42 @@ void Board::copyArray(Cell** original, Cell** copy)
   }
 }
 
+bool Board::checkStable()
+{
+  return m_isStable;
+}
+
+bool Board::isStable(Cell** array, Cell** toCheck)
+{
+  for (int i = 0; i < m_row; ++i)
+  {
+    for (int j = 0; j < m_col; ++j)
+    {
+      if (array[i][j].isAlive())
+      {
+        if (!toCheck[i][j].isAlive())
+        {
+          return false;
+        }
+      }
+      if (!array[i][j].isAlive())
+      {
+        if (!toCheck[i][j].isAlive())
+        {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 
 void Board::fillArray(Cell** array, float pop)
 {
   float total = m_row * m_col;
   float aliveGoal = total * pop;
   int liveCount = 0;
-  cout << total << " " << aliveGoal << endl;
 
   random_device rd;
   mt19937 mt(rd());
@@ -61,8 +90,6 @@ void Board::fillArray(Cell** array, float pop)
     }
     i++;
   }
-  cout << i << endl;
-
 }
 
 
@@ -147,48 +174,6 @@ int Board::checkBotLeft(int i, int j)
   }
 }
 
-int Board::checkDonutUp(int i, int j)
-{
-  if (cellArray[m_row-1][j].isAlive() == true)
-  {
-    return 1;
-  } else  {
-    return 0;
-  }
-}
-
-int Board::checkDonutDown(int i, int j)
-{
-  if (cellArray[0][j].isAlive() == true)
-  {
-    return 1;
-  } else  {
-    return 0;
-  }
-}
-
-int Board::checkDonutRight(int i, int j)
-{
-  if (cellArray[i][0].isAlive() == true)
-  {
-    return 1;
-  } else  {
-    return 0;
-  }
-}
-
-int Board::checkDonutLeft(int i, int j)
-{
-  if (cellArray[i][m_col-1].isAlive() == true)
-  {
-    return 1;
-  } else  {
-    return 0;
-  }
-}
-
-
-
 void Board::setup()
 {
   if (m_mapChoice == 1)
@@ -218,9 +203,58 @@ void Board::setup()
     copyArray(cellArray, shadowArray);
 
 
-  }
+  } else
   {
-    //MAP FROM FILE
+    ifstream inFS;
+    string line;
+    string fileName;
+    int lineCounter = 0;
+
+    cout << "what is the name of the map file?" << endl;
+    cin >> fileName;
+    inFS.open(fileName);
+
+    if (!inFS.is_open())
+    {
+      cout << "Could not open file." << endl;
+      cout << "Aborting. Please input a proper file name and try again." << endl;
+    }
+
+    //gets the first 2 lines
+    inFS >> line;
+    m_row = stoi(line);
+    inFS >> line;
+    m_col = stoi(line);
+
+
+    //makes the array
+    cellArray = new Cell *[m_row];
+    shadowArray = new Cell *[m_row];
+    for (int i = 0; i < m_row; ++i)
+    {
+      cellArray[i] = new Cell[m_col];
+      shadowArray[i] = new Cell[m_col];
+    }
+    while(!inFS.eof())
+    {
+      inFS >> line;
+      if (!inFS.fail())
+      {
+        for (int i = 0; i < m_col; ++i)
+        {
+
+          if (line[i] == 'X')
+          {
+            cellArray[lineCounter][i].setAlive();
+          }
+        }
+        lineCounter++;
+      }
+    }
+
+
+
+
   }
 }
 
@@ -239,11 +273,33 @@ void Board::play() //oh god
           if (j == 0) //top left
           {
             NeighborCount = checkDown(i,j) + checkRight(i,j) + checkBotRight(i,j);
-            cout << NeighborCount;
-            cout << " checking top left";
             if (m_boundaryStyle == 2) // donut
             {
-
+              //check up left (aka bot right)
+              if (cellArray[m_row-1][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check up right
+              if (cellArray[m_row-1][j+1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check left (loops around to right side)
+              if(cellArray[i][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down left
+              if (cellArray[i+1][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check up
+              if(cellArray[m_row-1][j].isAlive())
+              {
+                NeighborCount++;
+              }
             }
             if (m_boundaryStyle == 3) //mirror
             {
@@ -251,17 +307,42 @@ void Board::play() //oh god
               {
                 NeighborCount+= 3;
               }
-              cout << NeighborCount;
-              cout << " checking top left. M";
             }
           } else if (j == m_col - 1) //top right
           {
               NeighborCount = checkDown(i,j) + checkLeft(i,j) + checkBotLeft(i,j);
-              cout << NeighborCount;
-              cout << " checking top right";
               if (m_boundaryStyle == 2) // donut
               {
-                //add additional values
+                //check up left
+                if (cellArray[m_row-1][j-1].isAlive())
+                {
+                  NeighborCount++;
+                }
+
+                //check up
+                if(cellArray[m_row-1][j].isAlive())
+                {
+                  NeighborCount++;
+                }
+
+                //check up right (aka bot left corner)
+                if (cellArray[m_row-1][0].isAlive())
+                {
+                  NeighborCount++;
+                }
+
+                //check right
+                if (cellArray[i][0].isAlive())
+                {
+                  NeighborCount++;
+                }
+
+                //check down right
+                if (cellArray[i+1][0].isAlive())
+                {
+                  NeighborCount++;
+                }
+
               }
               if (m_boundaryStyle == 3) //mirror
               {
@@ -269,17 +350,30 @@ void Board::play() //oh god
                 {
                   NeighborCount+= 3;
                 }
-                cout << NeighborCount;
-                cout << "checking top left. M";
               }
 
           } else  //regular top row
           {
             NeighborCount = checkDown(i,j) + checkLeft(i,j) + checkRight(i,j) + checkBotLeft(i,j) + checkBotRight(i,j);
-              cout << NeighborCount;
-            cout << " checking top row";
             if (m_boundaryStyle == 2) // donut
             {
+              //check up right
+              if (cellArray[m_row-1][j+1].isAlive())
+              {
+                NeighborCount++;
+              }
+
+              //check up
+              if (cellArray[m_row-1][j].isAlive())
+              {
+                NeighborCount++;
+              }
+
+              //check up left
+              if (cellArray[m_row-1][j-1].isAlive())
+              {
+                NeighborCount++;
+              }
             }
             if (m_boundaryStyle == 3) //mirror
             {
@@ -287,11 +381,7 @@ void Board::play() //oh god
               {
                 NeighborCount+= 1;
               }
-            cout << NeighborCount;
-            cout << " checking top row. M";
-
             }
-
           }
 
         } else if (i == m_row - 1) //bottom
@@ -299,11 +389,33 @@ void Board::play() //oh god
           if (j == 0) //bot left
           {
             NeighborCount = checkUp(i,j) + checkRight(i,j) + checkTopRight(i,j);
-              cout << NeighborCount;
-            cout << " checking bot left";
             if (m_boundaryStyle == 2) // donut
             {
-              //add additional values
+              //check up left
+              if (cellArray[i-1][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check left
+              if (cellArray[i][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down left (aka top right)
+              if (cellArray[0][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down
+              if (cellArray[0][j].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down right
+              if (cellArray[0][j+1].isAlive())
+              {
+                NeighborCount++;
+              }
             }
             if (m_boundaryStyle == 3) //mirror
             {
@@ -312,20 +424,39 @@ void Board::play() //oh god
               {
                 NeighborCount+= 3;
               }
-              cout << NeighborCount;
-            cout << " checking bot left";
-
             }
 
 
           } else if (j == m_col - 1) //bot right
           {
             NeighborCount = checkUp(i,j) + checkLeft(i,j) + checkTopLeft(i,j);
-              cout << NeighborCount;
-            cout << " checking bot right";
             if (m_boundaryStyle == 2) // donut
             {
-              //add additional values
+              //check up right
+              if (cellArray[i-1][0].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check right
+              if (cellArray[i][0].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down right (aka top left)
+              if (cellArray[0][0].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down
+              if (cellArray[0][j].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down left
+              if (cellArray[0][j-1].isAlive())
+              {
+                NeighborCount++;
+              }
             }
             if (m_boundaryStyle == 3) //mirror
             {
@@ -333,18 +464,28 @@ void Board::play() //oh god
               {
                 NeighborCount+= 3;
               }
-              cout << NeighborCount;
-            cout << " checking bot right";
-
             }
 
           } else  //regular bot row
           {
             NeighborCount = checkUp(i,j) + checkLeft(i,j) + checkRight(i,j) + checkTopLeft(i,j) + checkTopRight(i,j);
-              cout << NeighborCount;
-            cout << " checking bot row";
             if (m_boundaryStyle == 2) // donut
             {
+              //check down left
+              if (cellArray[0][j-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down
+              if (cellArray[0][j].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down right
+              if (cellArray[0][j+1].isAlive())
+              {
+                NeighborCount++;
+              }
 
             }
             if (m_boundaryStyle == 3) //mirror
@@ -353,14 +494,9 @@ void Board::play() //oh god
               {
                 NeighborCount+= 1;
               }
-               cout << NeighborCount;
-            cout << " checking bot row";
-
             }
-
           }
         }
-
 
       } else if (j == 0 || j == m_col - 1) //column edge cases
       {
@@ -375,10 +511,24 @@ void Board::play() //oh god
           } else
           { // DEFAULT CASE FOR left COLUMN
             NeighborCount = checkDown(i,j) + checkUp(i,j) + checkRight(i,j) + checkBotRight(i,j) + checkTopRight(i,j);
-              cout << NeighborCount;
-            cout << " checking left col";
             if (m_boundaryStyle == 2) // donut
             {
+              //check up left
+              if (cellArray[i-1][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check left
+              if (cellArray[i][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down left
+              if (cellArray[i+1][m_col-1].isAlive())
+              {
+                NeighborCount++;
+              }
+
             }
             if (m_boundaryStyle == 3) //mirror
             {
@@ -386,9 +536,6 @@ void Board::play() //oh god
               {
                 NeighborCount+= 1;
               }
-              cout << NeighborCount;
-            cout << " checking left col";
-
             }
           }
 
@@ -403,10 +550,23 @@ void Board::play() //oh god
           } else
           { // DEFAULT CASE FOR RIGHT COLUMN
             NeighborCount = checkDown(i,j) + checkUp(i,j) + checkLeft(i,j) + checkBotLeft(i,j) + checkTopLeft(i,j);
-              cout << NeighborCount;
-            cout << " checking right col";
             if (m_boundaryStyle == 2) // donut
             {
+              //check up right
+              if (cellArray[i-1][0].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check right
+              if (cellArray[i][0].isAlive())
+              {
+                NeighborCount++;
+              }
+              //check down right
+              if (cellArray[i+1][0].isAlive())
+              {
+                NeighborCount++;
+              }
             }
             if (m_boundaryStyle == 3) //mirror
             {
@@ -414,9 +574,6 @@ void Board::play() //oh god
               {
                 NeighborCount+= 1;
               }
-              cout << NeighborCount;
-            cout << " checking right col";
-
             }
           }
         }
@@ -424,8 +581,6 @@ void Board::play() //oh god
       } else
       { //regular case, no collumn or row on edge
         NeighborCount = checkDown(i,j) + checkUp(i,j) + checkLeft(i,j) + checkRight(i,j) + checkTopLeft(i,j) + checkTopRight(i, j) + checkBotLeft(i,j) + checkBotRight(i,j);
-        cout << NeighborCount;
-        cout << " checking regular case.";
       }
 
       //cout << NeighborCount;
@@ -434,25 +589,30 @@ void Board::play() //oh god
       if (NeighborCount <= 1)
       {
         shadowArray[i][j].setDead();
-        cout << ". setting dead. Neighbor <= 1." << endl;
+        //cout << ". setting dead. Neighbor <= 1." << endl;
       } else if (NeighborCount == 2)
       {
         //do nothing
-        cout << ". do nothing. Neighbor = 2." << endl;
+        //cout << ". do nothing. Neighbor = 2." << endl;
       } else if (NeighborCount == 3)
       {
           shadowArray[i][j].changeState();
-          cout << ". changing state. Neighbor = 3." << endl;
+          //cout << ". changing state. Neighbor = 3." << endl;
       } else
       { //if 4 neighbors or more
           shadowArray[i][j].setDead();
-          cout << ". Setting dead. Neighbor >= 4." << endl;
+          //cout << ". Setting dead. Neighbor >= 4." << endl;
       }
 
 
     //copies results back over to original array.
     }
     cout << endl;
+  }
+  m_isStable = isStable(shadowArray, cellArray);
+  if (m_isStable == true)
+  {
+    cout << "Program stabilizing..." << endl;
   }
   copyArray(shadowArray, cellArray);
 }
@@ -470,6 +630,24 @@ void Board::print()
   cout << endl;
 }
 
+
+void Board::printToFile(string fileName)
+{
+  ofstream outFS;
+  outFS.open(fileName,ios::app);
+  for (int i = 0; i < m_row; ++i)
+  {
+    for (int j = 0; j < m_col; ++j)
+    {
+      outFS << cellArray[i][j].print();
+    }
+    outFS << endl;
+  }
+  outFS << endl;
+  outFS.close();
+}
+
+
 bool Board::isEmpty()
 {
   for (int i = 0; i < m_row; ++i)
@@ -482,5 +660,5 @@ bool Board::isEmpty()
       }
     }
   }
-  return true; 
+  return true;
 }
